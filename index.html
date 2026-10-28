@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b22">
+  <meta name="description" content="臺北市即時路況快訊牆，彙整道路管制、公車改道與交通公告，出門前快速掌握路況。">
+  <title>臺北即時路況快訊牆</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800;900&display=swap');
+
+    :root {
+      color-scheme: light;
+      --ink: #17252b;
+      --muted: #6f7c7d;
+      --muted-dark: #a3b4b2;
+      --paper: #f4f6f1;
+      --card: #fffefa;
+      --line: #e4e9e2;
+      --night: #101b22;
+      --night-2: #17262b;
+      --lime: #c6f277;
+      --lime-deep: #4e7024;
+      --orange: #f08a58;
+      --red: #d85644;
+      --shadow: 0 16px 38px rgba(26, 42, 41, .055);
+      --sans: 'Manrope', 'Noto Sans TC', sans-serif;
+      --mono: 'DM Mono', 'Noto Sans TC', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    a { color: inherit; }
+    .shell { min-height: 100vh; }
+    .topbar {
+      height: 68px;
+      padding: 0 clamp(20px, 4vw, 62px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--night);
+      color: #f5f8ef;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .brand { display:flex; align-items:center; gap: 12px; text-decoration:none; }
+    .brand-mark {
+      width: 31px; height:31px; display:grid; place-items:center; border-radius:10px;
+      background: var(--lime); color: #243225;
+    }
+    .brand-name { font-size: 14px; font-weight:800; letter-spacing:.03em; }
+    .brand-kicker { margin-top:3px; color:var(--muted-dark); font: 9px var(--mono); letter-spacing:.12em; }
+    .top-right { display:flex; align-items:center; gap:22px; color:#b7c4bf; font-size:11px; }
+    .live-label { display:flex; align-items:center; gap:8px; color:#e7eee2; letter-spacing:.1em; font: 10px var(--mono); }
+    .live-dot { height:7px; width:7px; border-radius:50%; background:var(--lime); box-shadow:0 0 0 4px rgba(198,242,119,.11); }
+    .top-clock { font: 11px var(--mono); color:#c5d2cd; letter-spacing:.04em; }
+
+    main { max-width: 1472px; padding: 34px clamp(18px, 4vw, 62px) 56px; margin: 0 auto; }
+    .intro {
+      position:relative; overflow:hidden; display:grid; grid-template-columns: 1fr 320px; gap:26px;
+      padding: 35px 38px; border-radius: 20px; color:#f4f6ee;
+      background: radial-gradient(ellipse at 85% 0%, rgba(96,127,76,.31), transparent 32%),
+        linear-gradient(118deg, #14242b 4%, #1a2c2c 72%, #263a32 100%);
+      box-shadow: 0 19px 38px rgba(19,39,38,.12);
+    }
+    .intro::after {
+      content:""; position:absolute; width:300px; height:300px; right:185px; top:-185px; border-radius:50%;
+      border:1px solid rgba(198,242,119,.13); box-shadow:0 0 0 25px rgba(198,242,119,.025), 0 0 0 55px rgba(198,242,119,.02);
+      pointer-events:none;
+    }
+    .eyebrow { display:flex; gap:9px; align-items:center; color:#b7c9b4; font:10px var(--mono); letter-spacing:.13em; text-transform:uppercase; }
+    .eyebrow-mark { display:inline-block; width:20px; height:1px; background:var(--lime); }
+    h1 { margin:14px 0 9px; max-width:700px; font-size: clamp(28px, 3.2vw, 42px); line-height:1.18; font-weight:800; letter-spacing:-.045em; }
+    .intro-copy { color:#adbfba; font-size:13px; line-height:1.8; }
+    .intro-copy b { color:#f1f4eb; font-weight:600; }
+    .intro-meta { display:flex; align-items:center; gap:13px; margin-top:27px; color:#aab9b2; font-size:10px; }
+    .meta-divider { height:12px; width:1px; background:rgba(255,255,255,.2); }
+    .intro-meta strong { color:#eef5e8; font-weight:600; }
+    .refresh-button {
+      display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border:1px solid rgba(255,255,255,.15);
+      border-radius:7px; background:rgba(255,255,255,.045); color:#edf4e8; cursor:pointer; font-size:10px; transition:.2s ease;
+    }
+    .refresh-button:hover { border-color:rgba(198,242,119,.5); background:rgba(198,242,119,.08); }
+    .refresh-button:disabled { opacity:.6; cursor:wait; }
+    .refresh-button svg { width:13px; height:13px; }
+    .intro-side { z-index:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; padding-left:28px; border-left:1px solid rgba(255,255,255,.11); }
+    .side-caption { color:#a8bab0; font-size:10px; letter-spacing:.07em; }
+    .side-big { margin:4px 0 2px; font-size:37px; font-weight:700; letter-spacing:-.06em; }
+    .side-big small { margin-left:5px; color:#c8d5ca; font-size:13px; font-weight:500; letter-spacing:0; }
+    .side-note { color:#a8bab0; font-size:10px; }
+    .freshness { display:flex; align-items:center; gap:7px; margin-top:17px; color:var(--lime); font-size:10px; }
+    .freshness svg { width:13px; height:13px; }
+
+    .section-head { display:flex; justify-content:space-between; align-items:flex-end; margin:32px 1px 13px; }
+    .section-eyebrow { color:#8a9890; font:10px var(--mono); letter-spacing:.13em; text-transform:uppercase; }
+    h2 { margin:4px 0 0; font-size:17px; font-weight:800; letter-spacing:-.03em; }
+    .section-tail { color:#88948e; font-size:10px; }
+    .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:13px; }
+    .stat {
+      min-height:119px; display:flex; justify-content:space-between; align-items:flex-start; padding:18px 19px;
+      border:1px solid var(--line); border-radius:13px; background:var(--card); box-shadow:var(--shadow);
+    }
+    .stat-label { color:#829087; font-size:10px; font-weight:600; }
+    .stat-number { margin:9px 0 5px; font:600 29px/1 var(--mono); letter-spacing:-.08em; }
+    .stat-unit { margin-left:4px; color:#85928b; font:11px var(--sans); letter-spacing:0; }
+    .stat-note { color:#9aa49b; font-size:9px; }
+    .stat-icon { width:31px; height:31px; display:grid; place-items:center; border:1px solid #e9eee7; border-radius:9px; color:#738675; background:#f8faf5; }
+    .stat-icon svg { width:15px; height:15px; }
+    .stat-accent .stat-icon { color:var(--lime-deep); border-color:#e2edce; background:#f4f9e8; }
+    .stat-alert .stat-icon { color:#bf6545; border-color:#f4e2d7; background:#fff5ee; }
+    .stat-alert .stat-number { color:#bd523b; }
+    .stale-warning { display:none; margin:13px 0 0; padding:11px 14px; border:1px solid #edc8b1; border-radius:10px; color:#9a5135; background:#fff7ef; font-size:11px; line-height:1.6; }
+    .stale-warning.visible { display:flex; align-items:center; gap:9px; }
+    .stale-warning svg { width:15px; height:15px; flex:0 0 15px; }
+
+    .insight-grid { display:grid; grid-template-columns:minmax(0, 1.55fr) minmax(270px, .8fr); gap:13px; margin-top:14px; }
+    .panel { border:1px solid var(--line); border-radius:13px; background:var(--card); box-shadow:var(--shadow); }
+    .panel-head { display:flex; align-items:center; justify-content:space-between; padding:17px 20px 0; }
+    .panel-title { font-size:12px; font-weight:800; }
+    .panel-subtitle { margin-top:4px; color:#929c94; font-size:9px; }
+    .panel-tag { padding:5px 8px; border:1px solid #e4e9e2; border-radius:6px; color:#77847a; font:9px var(--mono); }
+    .chart-wrap { height:132px; padding:14px 17px 0; }
+    #trendChart { width:100%; height:100%; overflow:visible; }
+    .chart-legend { display:flex; gap:16px; padding:6px 20px 14px; color:#87938b; font-size:9px; }
+    .legend-item { display:flex; align-items:center; gap:6px; }
+    .legend-dot { width:7px; height:7px; border-radius:50%; background:#7bb79c; }
+    .legend-dot.orange { background:#f09a68; }
+    .trend-empty { display:none; padding:0 20px 12px; color:#98a198; font-size:9px; }
+    .trend-empty.visible { display:block; }
+    .alert-panel { overflow:hidden; position:relative; padding:19px 20px; background:#f1f6e8; border-color:#e5edd8; }
+    .alert-panel::after { content:""; position:absolute; right:-22px; bottom:-63px; height:155px; width:155px; border:1px solid rgba(112,145,76,.14); border-radius:50%; box-shadow:0 0 0 18px rgba(112,145,76,.035), 0 0 0 38px rgba(112,145,76,.025); }
+    .alert-head { position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start; }
+    .alert-heading { color:#64745d; font-size:10px; font-weight:600; }
+    .alert-count { font:500 27px/1 var(--mono); color:#344934; letter-spacing:-.08em; }
+    .alert-count small { font:10px var(--sans); color:#71816b; letter-spacing:0; }
+    .alert-main { position:relative; z-index:1; margin-top:16px; max-width:260px; font-size:15px; font-weight:800; line-height:1.55; letter-spacing:-.025em; }
+    .alert-copy { position:relative; z-index:1; margin-top:5px; max-width:245px; color:#72806d; font-size:9px; line-height:1.7; }
+    .alert-recent-list { position:relative; z-index:1; display:grid; gap:7px; margin-top:13px; }
+    .alert-recent-item { display:flex; align-items:center; gap:7px; min-width:0; color:#4e6149; font-size:9px; }
+    .alert-recent-item::before { content:""; width:4px; height:4px; flex:0 0 4px; border-radius:50%; background:#be6944; }
+    .alert-recent-item span { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+
+    .notices-section { margin-top:33px; }
+    .notice-toolbar { display:flex; justify-content:space-between; align-items:center; gap:14px; margin:14px 0 13px; }
+    .filters { display:flex; flex-wrap:wrap; gap:7px; }
+    .filter-chip { padding:8px 11px; border:1px solid #e0e7de; border-radius:7px; color:#75827a; background:#fbfcf8; cursor:pointer; font-size:10px; transition:.18s ease; }
+    .filter-chip:hover { border-color:#bdccaf; color:#40523e; }
+    .filter-chip[aria-pressed="true"] { color:#f5f8ef; border-color:#263932; background:#263932; }
+    .search-area { display:flex; align-items:center; gap:7px; }
+    .searchbox { position:relative; width:min(250px, 32vw); }
+    .searchbox svg { position:absolute; left:11px; top:50%; transform:translateY(-50%); width:13px; color:#98a198; }
+    .searchbox input { width:100%; height:34px; padding:0 11px 0 32px; border:1px solid #e0e7de; border-radius:7px; outline:none; background:#fffefa; color:var(--ink); font-size:10px; }
+    .searchbox input:focus, .area-select:focus { border-color:#9aaf86; box-shadow:0 0 0 3px rgba(145,174,119,.14); }
+    .searchbox input::placeholder { color:#a7b0a8; }
+    .area-select { width:104px; height:34px; padding:0 8px; border:1px solid #e0e7de; border-radius:7px; outline:none; color:#79867d; background:#fffefa; font-size:10px; }
+    .notice-count { margin:0 1px 9px; color:#96a099; font-size:9px; }
+    .notice-list { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+    .notice-card { position:relative; display:flex; flex-direction:column; min-height:204px; padding:17px 18px 15px; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:var(--card); box-shadow:var(--shadow); transition:transform .18s ease, border-color .18s ease; }
+    .notice-card:hover { transform:translateY(-2px); border-color:#d0ddc8; }
+    .notice-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .notice-tags { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+    .tag { padding:4px 7px; border-radius:5px; color:#718172; background:#eff3ed; font-size:8px; font-weight:700; }
+    .tag.fresh { color:#a64e34; background:#fff0e7; }
+    .tag.active { color:#49704c; background:#edf7e7; }
+    .notice-date { color:#94a098; font:9px var(--mono); white-space:nowrap; }
+    .notice-title { margin:13px 0 7px; font-size:13px; font-weight:800; line-height:1.55; letter-spacing:-.025em; }
+    .notice-content { display:-webkit-box; overflow:hidden; -webkit-line-clamp:2; -webkit-box-orient:vertical; color:#839087; font-size:10px; line-height:1.75; }
+    .notice-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:auto; padding-top:13px; }
+    .notice-meta { display:flex; align-items:center; gap:9px; color:#87938b; font-size:9px; }
+    .notice-meta span + span::before { content:"·"; padding-right:9px; color:#c3cbc1; }
+    .source-link { display:inline-flex; align-items:center; gap:4px; color:#526b52; font-size:9px; text-decoration:none; }
+    .source-link:hover { color:#293d2c; text-decoration:underline; }
+    .source-link svg { width:11px; height:11px; }
+    .empty-state, .error-state { grid-column:1/-1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:210px; padding:25px; border:1px dashed #d5ded3; border-radius:12px; color:#7d8b7e; text-align:center; }
+    .empty-state svg, .error-state svg { width:25px; height:25px; color:#9eae98; }
+    .empty-state strong, .error-state strong { color:#4f5e50; font-size:12px; }
+    .empty-state span, .error-state span { max-width:350px; font-size:10px; line-height:1.7; }
+    .error-state { border-color:#eed4ca; color:#916653; background:#fff9f6; }
+    .error-state strong { color:#94583d; }
+
+    footer { margin-top:30px; padding-top:18px; border-top:1px solid #e0e7de; color:#8b978e; font-size:9px; line-height:1.8; }
+    .footer-main { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+    .footer-source { display:flex; flex-wrap:wrap; gap:5px 13px; }
+    .source-endpoint { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px; }
+    .source-endpoint code { padding:2px 5px; border-radius:4px; color:#71834e; background:#edf3e4; font:9px var(--mono); }
+    .copy-url { padding:3px 7px; border:1px solid #dce5d7; border-radius:5px; color:#60735d; background:#fffefa; cursor:pointer; font-size:8px; }
+    .copy-url:hover { border-color:#aabe99; background:#f6f9f1; }
+    .copy-url:focus-visible { outline:2px solid #8aa774; outline-offset:2px; }
+    footer a { color:#5f775e; text-decoration:none; border-bottom:1px solid #b6c7ac; }
+    footer a:hover { color:#344b34; }
+    .signature { color:#5f6d62; font-size:10px; font-weight:700; white-space:nowrap; }
+    .footer-license { margin-top:9px; color:#a0aaa1; }
+    .spin { animation:spin .9s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    @media (max-width: 980px) {
+      main { padding-top:25px; }
+      .intro { grid-template-columns:1fr 235px; padding:29px 28px; }
+      .stats { grid-template-columns:repeat(2, 1fr); }
+      .insight-grid { grid-template-columns:1.35fr .9fr; }
+    }
+    @media (max-width: 700px) {
+      .topbar { height:58px; padding:0 17px; }
+      .top-right { gap:11px; }
+      .top-right .top-label { display:none; }
+      .brand-name { font-size:12px; }
+      .brand-kicker { font-size:8px; }
+      .top-clock { font-size:9px; }
+      main { padding:17px 14px 34px; }
+      .intro { display:block; padding:23px 21px 20px; border-radius:15px; }
+      .intro::after { right:-116px; top:-174px; }
+      h1 { margin-top:13px; font-size:28px; }
+      .intro-copy { max-width:410px; font-size:11px; }
+      .intro-meta { flex-wrap:wrap; gap:8px 10px; margin-top:20px; font-size:9px; }
+      .intro-side { margin-top:19px; padding:13px 0 0; border-top:1px solid rgba(255,255,255,.13); border-left:0; }
+      .side-big { font-size:28px; }
+      .freshness { margin-top:9px; }
+      .section-head { margin-top:25px; }
+      .stats { gap:8px; }
+      .stat { min-height:105px; padding:13px 13px; border-radius:10px; }
+      .stat-number { font-size:25px; }
+      .stat-icon { width:27px; height:27px; }
+      .insight-grid { grid-template-columns:1fr; gap:9px; }
+      .chart-wrap { height:125px; }
+      .alert-panel { min-height:177px; }
+      .notices-section { margin-top:26px; }
+      .notice-toolbar { align-items:stretch; flex-direction:column; }
+      .filters { gap:6px; }
+      .filter-chip { padding:7px 9px; font-size:9px; }
+      .search-area { width:100%; }
+      .searchbox { width:auto; flex:1; }
+      .area-select { width:108px; }
+      .notice-list { grid-template-columns:1fr; gap:8px; }
+      .notice-card { min-height:180px; padding:15px 15px 13px; }
+      .notice-title { font-size:12px; }
+      .footer-main { flex-direction:column; gap:11px; }
+      .signature { white-space:normal; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; transition-duration:.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="臺北即時路況快訊牆首頁">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none"><path d="M4 18.5V13c0-1.1.9-2 2-2h2.5l2.2-5h3.1l2.2 5H18c1.1 0 2 .9 2 2v5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 17h8M9 11l2 7m4-7-2 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="15" r=".8" fill="currentColor"/><circle cx="17" cy="15" r=".8" fill="currentColor"/></svg>
+        </span>
+        <span><span class="brand-name">臺北路況快訊牆</span><span class="brand-kicker">TAIPEI TRAFFIC WATCH</span></span>
+      </a>
+      <div class="top-right">
+        <span class="top-label">資料連線狀態</span>
+        <span class="live-label"><i class="live-dot" id="liveDot"></i><span id="connectionLabel">正在連線</span></span>
+        <span class="top-clock" id="clock">--:--:--</span>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="intro" aria-labelledby="pageTitle">
+        <div>
+          <div class="eyebrow"><span class="eyebrow-mark"></span>TAIPEI · LIVE ROAD UPDATES</div>
+          <h1 id="pageTitle">臺北即時路況<br>快訊牆</h1>
+          <div class="intro-copy">準備出門前，先掌握路上的變化。<b>交通管制、公車改道與最新公告</b>，一頁看清楚。</div>
+          <div class="intro-meta">
+            <span>資料更新 <strong id="sourceUpdated">讀取中</strong></span><i class="meta-divider"></i>
+            <span>本頁擷取 <strong id="fetchedAt">—</strong></span><i class="meta-divider"></i>
+            <button class="refresh-button" id="refreshButton" type="button" aria-label="立即更新路況資料">
+              <svg id="refreshIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.1 9a7 7 0 0 1 11.6-2L20 9M4 15l2.3 2a7 7 0 0 0 11.6-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              立即更新
+            </button>
+          </div>
+        </div>
+        <div class="intro-side">
+          <div class="side-caption">目前收錄公告</div>
+          <div class="side-big"><span id="heroCount">—</span><small>則訊息</small></div>
+          <div class="side-note">同步臺北市政府交通局開放資料</div>
+          <div class="freshness" id="nextUpdate">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <span>每 10 分鐘自動更新</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <div><div class="section-eyebrow">AT A GLANCE</div><h2>路況總覽</h2></div>
+        <div class="section-tail">依最新一筆資料即時統計</div>
+      </div>
+      <section class="stats" aria-label="路況統計">
+        <article class="stat stat-accent">
+          <div><div class="stat-label">目前公告</div><div class="stat-number"><span id="statTotal">—</span><span class="stat-unit">則</span></div><div class="stat-note">資料集現有訊息總數</div></div>
+          <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4.8h14a1.7 1.7 0 0 1 1.7 1.7v11A1.7 1.7 0 0 1 19 19.2H5A1.7 1.7 0 0 1 3.3 17.5v-11A1.7 1.7 0 0 1 5 4.8Z" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 9h9m-9 3.5h9m-9 3.5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+        </article>
+        <article class="stat stat-alert">
+          <div><div class="stat-label">近 1 小時新發布</div><div class="stat-number"><span id="statRecent">—</span><span class="stat-unit">則</span></div><div class="stat-note">符合條件以醒目色標示</div></div>
+          <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.8 21 19H3l9-15.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v4.5m0 2.4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </article>
+        <article class="stat">
+          <div><div class="stat-label">目前進行中</div><div class="stat-number"><span id="statActive">—</span><span class="stat-unit">則</span></div><div class="stat-note">發布時段涵蓋現在</div></div>
+          <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+        </article>
+        <article class="stat">
+          <div><div class="stat-label">涵蓋行政區</div><div class="stat-number"><span id="statAreas">—</span><span class="stat-unit">區</span></div><div class="stat-note">依公告內容辨識區域</div></div>
+          <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M19 10.2c0 5.1-7 10.2-7 10.2S5 15.3 5 10.2a7 7 0 1 1 14 0Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="2.3" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        </article>
+      </section>
+      <div class="stale-warning" id="staleWarning" role="status">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5m0 3.2h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span id="staleText">資料更新時間較久，路況可能有延遲。</span>
+      </div>
+
+      <section class="insight-grid" aria-label="路況變化與新訊提醒">
+        <article class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">快訊變化</div><div class="panel-subtitle">記錄本頁每次更新時的公告與新發布數量</div></div>
+            <span class="panel-tag">最近 12 次擷取</span>
+          </div>
+          <div class="chart-wrap"><canvas id="trendChart" role="img" aria-label="最近幾次資料擷取的公告數量與近一小時新發布數量折線圖"></canvas></div>
+          <div class="chart-legend"><span class="legend-item"><i class="legend-dot"></i>公告數量</span><span class="legend-item"><i class="legend-dot orange"></i>近 1 小時新發布</span></div>
+          <div class="trend-empty" id="trendEmpty">歷史趨勢會在自動更新後逐步累積。</div>
+        </article>
+        <article class="panel alert-panel">
+          <div class="alert-head"><div class="alert-heading">近一小時新訊</div><div class="alert-count"><span id="alertCount">—</span><small> 則</small></div></div>
+          <div class="alert-main" id="alertHeadline">正在檢查最新公告</div>
+          <div class="alert-copy" id="alertCopy">符合近一小時新發布條件的訊息會列在這裡。</div>
+          <div class="alert-recent-list" id="alertRecentList"></div>
+        </article>
+      </section>
+
+      <section class="notices-section" id="announcements" aria-labelledby="noticeHeading">
+        <div class="section-head" style="margin-top:0">
+          <div><div class="section-eyebrow">LIVE FEED</div><h2 id="noticeHeading">路況快訊</h2></div>
+          <div class="section-tail">依資料發布時間排序</div>
+        </div>
+        <div class="notice-toolbar">
+          <div class="filters" role="group" aria-label="篩選公告">
+            <button class="filter-chip" type="button" data-filter="all" aria-pressed="true">全部公告</button>
+            <button class="filter-chip" type="button" data-filter="recent" aria-pressed="false">近 1 小時</button>
+            <button class="filter-chip" type="button" data-filter="control" aria-pressed="false">道路管制</button>
+            <button class="filter-chip" type="button" data-filter="bus" aria-pressed="false">公車異動</button>
+            <button class="filter-chip" type="button" data-filter="active" aria-pressed="false">進行中</button>
+          </div>
+          <div class="search-area">
+            <label class="searchbox">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.6" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <input id="searchInput" type="search" placeholder="搜尋道路、行政區或關鍵字" aria-label="搜尋路況公告">
+            </label>
+            <select id="areaSelect" class="area-select" aria-label="依行政區篩選"><option value="">所有區域</option></select>
+          </div>
+        </div>
+        <div class="notice-count" id="noticeCount" aria-live="polite">載入即時公告中…</div>
+        <div class="notice-list" id="noticeList" aria-live="polite">
+          <div class="empty-state"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5h14v14H5z" stroke="currentColor" stroke-width="1.5"/><path d="M8 9h8m-8 3h8m-8 3h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><strong>正在取得臺北市即時交通訊息</strong><span>首次載入完成後，頁面會每 10 分鐘自動更新。</span></div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="footer-main">
+          <div class="footer-source">
+            <span>資料提供：臺北市政府交通局</span>
+            <span>資料集：<a href="https://data.gov.tw/dataset/128476" target="_blank" rel="noopener noreferrer">臺北市即時交通訊息</a></span>
+            <span>資料格式：JSON</span>
+            <span>更新頻率：約每 10 分鐘重新擷取</span>
+            <span class="source-endpoint">JSON 來源：<a href="https://tcgbusfs.blob.core.windows.net/dotapp/news.json" target="_blank" rel="noopener noreferrer"><code>tcgbusfs.blob.core.windows.net/dotapp/news.json</code></a><button class="copy-url" id="copyDataUrl" type="button" aria-label="複製 JSON 資料來源網址">複製網址</button></span>
+          </div>
+          <div class="signature">資通四勤 121271035 謝力翔</div>
+        </div>
+        <div class="footer-license">資料來源：臺北市政府交通局開放資料，依政府資料開放授權條款第 1 版使用；本頁為資訊彙整，實際管制情形請以主管機關最新公告為準。</div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+      const DATA_URL = 'https://tcgbusfs.blob.core.windows.net/dotapp/news.json';
+      const HISTORY_KEY = 'taipei-traffic-wall-history-v1';
+      const REFRESH_MS = 10 * 60 * 1000;
+      const ONE_HOUR_MS = 60 * 60 * 1000;
+      const STALE_MS = 30 * 60 * 1000;
+      const TZ = 'Asia/Taipei';
+      const TAIPEI_DISTRICTS = ['中正區', '大同區', '中山區', '松山區', '大安區', '萬華區', '信義區', '士林區', '北投區', '內湖區', '南港區', '文山區'];
+      const $ = (id) => document.getElementById(id);
+      let announcements = [];
+      let dataUpdatedAt = null;
+      let lastFetchAt = null;
+      let currentFilter = 'all';
+      let loading = false;
+      let hasLoaded = false;
+      let fetchFailed = false;
+      let nextRefreshAt = null;
+      let refreshTimer = null;
+      let history = readHistory();
+
+      function readHistory() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+          return Array.isArray(parsed) ? parsed.slice(-24) : [];
+        } catch { return []; }
+      }
+      function saveHistory() {
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-24))); } catch { /* storage is optional */ }
+      }
+      function parseTaipeiTime(value) {
+        if (!value) return null;
+        const input = String(value).trim();
+        const normalized = /(?:Z|[+-]\d\d:\d\d)$/i.test(input) ? input : `${input}+08:00`;
+        const date = new Date(normalized);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+      function fmtTime(date, includeDate = false) {
+        if (!date) return '—';
+        const options = includeDate
+          ? { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false, timeZone:TZ }
+          : { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:TZ };
+        return new Intl.DateTimeFormat('zh-TW', options).format(date).replaceAll('/', ' / ');
+      }
+      function fmtDateTime(date) {
+        if (!date) return '—';
+        return new Intl.DateTimeFormat('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false, timeZone:TZ }).format(date);
+      }
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+      }
+      function getPublicationDate(item) { return parseTaipeiTime(item.starttime); }
+      function isRecent(item, now = Date.now()) {
+        const date = getPublicationDate(item);
+        return !!date && (now - date.getTime()) >= 0 && (now - date.getTime()) <= ONE_HOUR_MS;
+      }
+      function isActive(item, now = Date.now()) {
+        const start = parseTaipeiTime(item.starttime);
+        const end = parseTaipeiTime(item.endtime);
+        return !!start && !!end && start.getTime() <= now && end.getTime() >= now;
+      }
+      function getAreas(item) {
+        const text = `${item.areaname || ''} ${item.chtmessage || ''} ${item.content || ''}`;
+        return TAIPEI_DISTRICTS.filter(district => text.includes(district));
+      }
+      function getArea(item) { return getAreas(item).join('、') || '未標示行政區'; }
+      function getCategory(item) {
+        const text = `${item.chtmessage || ''} ${item.content || ''}`;
+        if (/公車|站位|改道|停靠|路線/.test(text)) return '公車異動';
+        if (/封路|道路管制|交通管制|管制措施/.test(text)) return '道路管制';
+        if (/施工|工程|養護/.test(text)) return '道路施工';
+        return '交通公告';
+      }
+      function categoryFilter(item, filter) {
+        const text = `${item.chtmessage || ''} ${item.content || ''}`;
+        if (filter === 'bus') return /公車|站位|改道|停靠|路線/.test(text);
+        if (filter === 'control') return /封路|道路管制|交通管制|管制措施|封閉/.test(text);
+        return true;
+      }
+      function updateClock() {
+        $('clock').textContent = new Intl.DateTimeFormat('zh-TW', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false, timeZone:TZ }).format(new Date());
+        if (nextRefreshAt) {
+          const left = Math.max(0, nextRefreshAt - Date.now());
+          const minutes = Math.floor(left / 60000).toString().padStart(2, '0');
+          const seconds = Math.floor((left % 60000) / 1000).toString().padStart(2, '0');
+          $('nextUpdate').querySelector('span').textContent = `下次自動更新 ${minutes}:${seconds}`;
+        } else if (loading) $('nextUpdate').querySelector('span').textContent = '正在更新資料…';
+      }
+      function scheduleNextRefresh() {
+        clearTimeout(refreshTimer);
+        nextRefreshAt = Date.now() + REFRESH_MS;
+        refreshTimer = setTimeout(fetchData, REFRESH_MS);
+      }
+      function setConnection(ok, label) {
+        $('connectionLabel').textContent = label;
+        $('liveDot').style.background = ok ? 'var(--lime)' : 'var(--orange)';
+        $('liveDot').style.boxShadow = ok ? '0 0 0 4px rgba(198,242,119,.11)' : '0 0 0 4px rgba(240,138,88,.13)';
+      }
+      function buildAreas() {
+        const areaSelect = $('areaSelect');
+        const selected = areaSelect.value;
+        const areas = [...new Set(announcements.flatMap(getAreas))].sort((a,b) => a.localeCompare(b, 'zh-TW'));
+        areaSelect.innerHTML = '<option value="">所有區域</option>' + areas.map(area => `<option value="${escapeHtml(area)}">${escapeHtml(area)}</option>`).join('');
+        if (areas.includes(selected)) areaSelect.value = selected;
+      }
+      function renderStats() {
+        const now = Date.now();
+        const recent = announcements.filter(item => isRecent(item, now));
+        const active = announcements.filter(item => isActive(item, now));
+        const areas = new Set(announcements.flatMap(getAreas));
+        $('heroCount').textContent = announcements.length;
+        $('statTotal').textContent = announcements.length;
+        $('statRecent').textContent = recent.length;
+        $('statActive').textContent = active.length;
+        $('statAreas').textContent = areas.size;
+        $('alertCount').textContent = recent.length;
+        if (recent.length) {
+          $('alertHeadline').textContent = '出門前留意最新路況變化';
+          $('alertCopy').textContent = '以下快訊於最近一小時發布，點選公告可查看交通局原文。';
+          $('alertRecentList').innerHTML = recent.slice(0, 2).map(item => `<div class="alert-recent-item"><span>${escapeHtml(item.chtmessage || '最新交通訊息')}</span></div>`).join('');
+        } else {
+          $('alertHeadline').textContent = '過去一小時沒有新發布的訊息';
+          $('alertCopy').textContent = '目前沒有符合醒目提醒條件的公告。下一次更新後會再次檢查。';
+          $('alertRecentList').innerHTML = '';
+        }
+        const delayed = dataUpdatedAt && Date.now() - dataUpdatedAt.getTime() > STALE_MS;
+        $('staleWarning').classList.toggle('visible', !!delayed);
+        if (delayed) $('staleText').textContent = `資料集最後更新於 ${fmtDateTime(dataUpdatedAt)}，已超過 30 分鐘沒有更新，路況可能延遲。`;
+      }
+      function renderNotices() {
+        const query = $('searchInput').value.trim().toLocaleLowerCase('zh-Hant');
+        const area = $('areaSelect').value;
+        const now = Date.now();
+        let filtered = announcements.filter(item => {
+          if (currentFilter === 'recent' && !isRecent(item, now)) return false;
+          if (currentFilter === 'active' && !isActive(item, now)) return false;
+          if (!categoryFilter(item, currentFilter)) return false;
+          if (area && !getAreas(item).includes(area)) return false;
+          if (query) {
+            const haystack = `${item.chtmessage || ''} ${item.content || ''} ${getArea(item)} ${getCategory(item)}`.toLocaleLowerCase('zh-Hant');
+            if (!haystack.includes(query)) return false;
+          }
+          return true;
+        });
+        filtered.sort((a,b) => (getPublicationDate(b)?.getTime() || 0) - (getPublicationDate(a)?.getTime() || 0));
+        $('noticeCount').textContent = `${fetchFailed ? '更新失敗，保留上次成功資料。' : ''}顯示 ${filtered.length} 則公告 ／ 共 ${announcements.length} 則`;
+        if (!hasLoaded && fetchFailed) {
+          $('noticeList').innerHTML = `<div class="error-state"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.8 21 19H3l9-15.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v4.5m0 2.4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><strong>暫時無法取得即時資料</strong><span>請確認網路連線，或稍後按「立即更新」重試。若資料來源暫時無回應，頁面會保留上一次成功取得的資料。</span></div>`;
+          return;
+        }
+        if (!hasLoaded) return;
+        if (!announcements.length) {
+          $('noticeList').innerHTML = '<div class="empty-state"><strong>目前沒有交通公告</strong><span>資料已成功取得，交通局目前未提供有效訊息。頁面會持續自動更新。</span></div>';
+          return;
+        }
+        if (!filtered.length) {
+          $('noticeList').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.6" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><strong>找不到符合條件的公告</strong><span>試試其他關鍵字或篩選條件。</span></div>`;
+          return;
+        }
+        $('noticeList').innerHTML = filtered.map(item => {
+          const fresh = isRecent(item, now);
+          const active = isActive(item, now);
+          const date = getPublicationDate(item);
+          const start = parseTaipeiTime(item.starttime);
+          const category = getCategory(item);
+          const areaLabel = getArea(item);
+          const summary = item.content || '本則公告未提供詳細內容，請開啟交通局原文查看。';
+          const source = item.url && /^https:\/\//i.test(item.url) ? item.url : 'https://data.gov.tw/dataset/128476';
+          return `<article class="notice-card">
+            <div class="notice-top"><div class="notice-tags"><span class="tag">${escapeHtml(category)}</span>${fresh ? '<span class="tag fresh">近 1 小時發布</span>' : ''}${active ? '<span class="tag active">進行中</span>' : ''}</div><time class="notice-date" datetime="${date ? date.toISOString() : ''}">${fmtTime(date, true)}</time></div>
+            <h3 class="notice-title">${escapeHtml(item.chtmessage || '臺北市交通訊息')}</h3>
+            <div class="notice-content">${escapeHtml(summary)}</div>
+            <div class="notice-foot"><div class="notice-meta"><span>${escapeHtml(areaLabel)}</span><span>${start ? `開始 ${fmtTime(start, true)}` : '交通局公告'}</span></div><a class="source-link" href="${escapeHtml(source)}" target="_blank" rel="noopener noreferrer">查看原文<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 4h6v6m-.5-5.5-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a></div>
+          </article>`;
+        }).join('');
+      }
+      function pushHistory() {
+        const recent = announcements.filter(item => isRecent(item)).length;
+        const point = { time:Date.now(), total:announcements.length, recent };
+        const last = history[history.length - 1];
+        if (last && Math.abs(point.time - last.time) < 30000) history[history.length - 1] = point;
+        else history.push(point);
+        history = history.slice(-24);
+        saveHistory();
+      }
+      function drawChart() {
+        const canvas = $('trendChart');
+        const bounds = canvas.getBoundingClientRect();
+        if (!bounds.width) return;
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(bounds.width * ratio);
+        canvas.height = Math.floor(bounds.height * ratio);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(ratio, ratio);
+        const w = bounds.width, h = bounds.height;
+        const left = 30, right = 12, top = 12, bottom = 24;
+        const plotW = w - left - right, plotH = h - top - bottom;
+        const points = history.slice(-12);
+        const maxValue = Math.max(4, ...points.map(p => p.total), ...points.map(p => p.recent)) * 1.12;
+        ctx.clearRect(0, 0, w, h);
+        ctx.font = '9px DM Mono, monospace';
+        ctx.textAlign = 'right';
+        for (let i=0; i<4; i++) {
+          const y = top + (plotH * i / 3);
+          ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(w-right, y);
+          ctx.strokeStyle = '#edf0ea'; ctx.lineWidth = 1; ctx.stroke();
+          ctx.fillStyle = '#a2aaa2'; ctx.fillText(String(Math.round(maxValue * (1-i/3))), left-8, y+3);
+        }
+        if (points.length < 2) $('trendEmpty').classList.add('visible');
+        else $('trendEmpty').classList.remove('visible');
+        const xFor = i => left + (points.length <= 1 ? plotW/2 : plotW * i/(points.length-1));
+        const yFor = value => top + plotH - (value/maxValue)*plotH;
+        const line = (key, color, fill) => {
+          if (!points.length) return;
+          ctx.beginPath();
+          points.forEach((point, i) => { const x=xFor(i), y=yFor(point[key]); if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+          if (fill) {
+            ctx.lineTo(xFor(points.length-1), top+plotH); ctx.lineTo(xFor(0), top+plotH); ctx.closePath();
+            const gradient = ctx.createLinearGradient(0, top, 0, top+plotH);
+            gradient.addColorStop(0, 'rgba(123,183,156,.22)'); gradient.addColorStop(1, 'rgba(123,183,156,0)');
+            ctx.fillStyle = gradient; ctx.fill();
+            ctx.beginPath(); points.forEach((point, i) => { const x=xFor(i), y=yFor(point[key]); if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+          }
+          ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
+          points.forEach((point,i) => { ctx.beginPath(); ctx.arc(xFor(i), yFor(point[key]), i===points.length-1 ? 3 : 2, 0, Math.PI*2); ctx.fillStyle=color; ctx.fill(); });
+        };
+        line('total', '#7bb79c', true);
+        line('recent', '#f09a68', false);
+        const labelCount = Math.min(4, points.length);
+        ctx.fillStyle='#98a199'; ctx.textAlign='center'; ctx.font='9px DM Mono, monospace';
+        for (let i=0; i<labelCount; i++) {
+          const idx = labelCount === 1 ? points.length-1 : Math.round(i*(points.length-1)/(labelCount-1));
+          const label = new Intl.DateTimeFormat('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:TZ}).format(new Date(points[idx].time));
+          ctx.fillText(label, xFor(idx), h-4);
+        }
+      }
+      function renderAll() {
+        renderStats(); buildAreas(); renderNotices(); drawChart();
+        $('sourceUpdated').textContent = dataUpdatedAt ? fmtDateTime(dataUpdatedAt) : '來源未提供';
+        if (lastFetchAt) $('fetchedAt').textContent = fmtDateTime(lastFetchAt);
+      }
+      async function fetchData() {
+        if (loading) return;
+        loading = true;
+        clearTimeout(refreshTimer);
+        nextRefreshAt = null;
+        updateClock();
+        $('refreshButton').disabled = true;
+        $('refreshIcon').classList.add('spin');
+        if (!hasLoaded) setConnection(false, '正在連線');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 18000);
+        try {
+          const response = await fetch(DATA_URL, { cache:'no-store', signal:controller.signal });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const payload = await response.json();
+          if (!payload || !Array.isArray(payload.News)) throw new Error('資料格式不符');
+          const fetched = new Date();
+          announcements = payload.News;
+          hasLoaded = true;
+          fetchFailed = false;
+          dataUpdatedAt = parseTaipeiTime(payload.updateTime) || null;
+          lastFetchAt = fetched;
+          pushHistory();
+          setConnection(true, '資料已同步');
+          renderAll();
+        } catch (error) {
+          console.warn('臺北市即時交通資料讀取失敗', error);
+          fetchFailed = true;
+          setConnection(false, hasLoaded ? '更新失敗' : '暫時無法連線');
+          if (hasLoaded) {
+            $('fetchedAt').textContent = `${fmtDateTime(lastFetchAt)}（上次成功）`;
+            renderStats();
+          }
+          renderNotices();
+        } finally {
+          clearTimeout(timeout);
+          loading = false;
+          $('refreshButton').disabled = false;
+          $('refreshIcon').classList.remove('spin');
+          scheduleNextRefresh();
+          updateClock();
+        }
+      }
+      document.querySelectorAll('.filter-chip').forEach(button => button.addEventListener('click', () => {
+        currentFilter = button.dataset.filter;
+        document.querySelectorAll('.filter-chip').forEach(chip => chip.setAttribute('aria-pressed', String(chip === button)));
+        renderNotices();
+      }));
+      $('searchInput').addEventListener('input', renderNotices);
+      $('areaSelect').addEventListener('change', renderNotices);
+      $('refreshButton').addEventListener('click', fetchData);
+      $('copyDataUrl').addEventListener('click', async () => {
+        const button = $('copyDataUrl');
+        try {
+          if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(DATA_URL);
+          else {
+            const field = document.createElement('textarea');
+            field.value = DATA_URL; field.setAttribute('readonly', '');
+            field.style.position = 'fixed'; field.style.opacity = '0';
+            document.body.appendChild(field); field.select();
+            const copied = document.execCommand('copy'); field.remove();
+            if (!copied) throw new Error('copy unavailable');
+          }
+          button.textContent = '已複製';
+        } catch {
+          button.textContent = '複製失敗';
+        }
+        setTimeout(() => { button.textContent = '複製網址'; }, 1800);
+      });
+      window.addEventListener('resize', drawChart, { passive:true });
+      updateClock();
+      setInterval(updateClock, 1000);
+      setInterval(() => {
+        if (hasLoaded) { renderStats(); renderNotices(); }
+      }, 60000);
+      fetchData();
+    })();
+  </script>
+</body>
+</html>
